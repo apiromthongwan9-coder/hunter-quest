@@ -54,25 +54,26 @@ function chat(m){
 }
 
 /* ===== ตีมอนด้วยกัน: คนสร้างห้องถือสถานะมอนสเตอร์ ทุกคนที่อยู่เวิลด์เดียวกับเขาเห็นมอนตัวเดียวกัน (ยกเว้นบอส) ===== */
-var NS=30,lastM=0;
+var lastM=0;
 function okW(){try{return !!(WD[cw]&&WD[cw].k)&&cw!='c'&&cw!='l'}catch(e){return false}}
-function okM(m){return m&&!m.boss&&!m.cv&&!m.tmp}
-function assist(m){try{var x=KD[m.k].xp[0];gainXp(x);txt(m.x,m.y-46,'🤝 +'+x+' XP','#9fffb0')}catch(e){}}
-function applyHit(d){if(!okW()||d.w!=cw)return;var m=M[d.i];if(!okM(m)||m.dead)return;m.hp-=d.d;m.hurt=.15;if(m.hp<=0){m.dead=1;m.rt=8;assist(m)}}
+function okM(m){return m&&!m.cv&&!m.tmp}
+function assist(m){try{var x=KD[m.k].xp[0];if(m.boss){x=Math.round(KD[m.k].xp[1]*BSS[m.k].xpm*.5);P.gem+=2}gainXp(x);txt(m.x,m.y-46,'🤝 +'+x+' XP','#9fffb0')}catch(e){}}
+function applyHit(d){if(!okW()||d.w!=cw)return;var m=M[d.i];if(!okM(m)||m.dead)return;m.hp-=d.d;m.hurt=.15;if(m.hp<=0){if(m.boss){m.hp=0;try{bossKill(m)}catch(e){m.dead=1;m.rt=150}}else{m.dead=1;m.rt=8;assist(m)}}}
 function applyMon(d){if(!okW()||d.w!=cw)return;d.a.forEach(function(e){var m=M[e[0]];if(!okM(m))return;
+ if(m.boss&&m.dead&&e[6]&&e[8]!=null)m.rt=e[8];
  if(m.dead&&!e[6])return;
- if(e[6]&&!m.dead){m.dead=1;m.rt=8;assist(m)}
+ if(e[6]&&!m.dead){m.dead=1;m.rt=m.boss?(e[8]||150):8;assist(m)}
  if(m.tx==null||Math.hypot(e[1]-m.x,e[2]-m.y)>150){m.x=e[1];m.y=e[2]}m.tx=e[1];m.ty=e[2];m.lv=e[3];m.hp=e[4];m.mx=e[5];m.fl=e[7];
- try{var K=KD[m.k];m.dmg=K.dm+m.lv*K.ds|0}catch(x){}})}
+ if(!m.boss)try{var K=KD[m.k];m.dmg=K.dm+m.lv*K.ds|0}catch(x){}})}
 function hook(){
  if(typeof hit!='function'||typeof mp!='function')return;
  var oh=window.hit,om=window.mp;
  window.hit=function(m,d){var b=m.hp;oh.apply(this,arguments);
-  if(!isHost&&hostConn&&hostConn.open&&okW()&&okM(m)){var i=M.indexOf(m);if(i>=0&&i<NS&&b>m.hp)hostConn.send({t:'h',w:cw,i:i,d:b-m.hp})}};
+  if(!isHost&&hostConn&&hostConn.open&&okW()&&okM(m)){var i=M.indexOf(m);if(i>=0&&b>m.hp)hostConn.send({t:'h',w:cw,i:i,d:b-m.hp})}};
  window.mp=function(){om();var n=Date.now();
-  if(!isHost&&okW())for(var j=0;j<NS&&j<M.length;j++){var q=M[j];if(okM(q)&&!q.dead&&q.tx!=null){q.x+=(q.tx-q.x)*.3;q.y+=(q.ty-q.y)*.3}}
+  if(!isHost&&okW())for(var j=0;j<M.length;j++){var q=M[j];if(okM(q)&&!q.dead&&q.tx!=null){q.x+=(q.tx-q.x)*.3;q.y+=(q.ty-q.y)*.3}}
   if(isHost&&n-lastM>100&&okW()){lastM=n;var a=[];
-   for(var i=0;i<NS&&i<M.length;i++){var m=M[i];if(okM(m))a.push([i,m.x|0,m.y|0,m.lv,m.hp|0,m.mx|0,m.dead?1:0,m.fl])}
+   for(var i=0;i<M.length;i++){var m=M[i];if(okM(m))a.push([i,m.x|0,m.y|0,m.lv,m.hp|0,m.mx|0,m.dead?1:0,m.fl,m.boss?Math.ceil(m.rt||0):null])}
    var s={t:'m',w:cw,a:a};for(var k in conns)if(conns[k].open)conns[k].send(s)}}
 }
 addEventListener('load',hook);
